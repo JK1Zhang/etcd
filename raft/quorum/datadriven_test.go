@@ -16,6 +16,7 @@ package quorum
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -177,11 +178,11 @@ func TestDataDriven(t *testing.T) {
 					}
 					// Joining a majority with the empty majority should give same result.
 					if aIdx := JointConfig([2]MajorityConfig{c, {}}).CommittedIndex(l); aIdx != idx {
-						fmt.Fprintf(&buf, "%s <-- via zero-joint quorum\n", aIdx)
+						fmt.Fprintf(&buf, "%s <-- via zero-joint quorum\n", strconv.FormatUint(aIdx, 10))
 					}
 					// Joining a majority with itself should give same result.
 					if aIdx := JointConfig([2]MajorityConfig{c, c}).CommittedIndex(l); aIdx != idx {
-						fmt.Fprintf(&buf, "%s <-- via self-joint quorum\n", aIdx)
+						fmt.Fprintf(&buf, "%s <-- via self-joint quorum\n", strconv.FormatUint(aIdx, 10))
 					}
 					overlay := func(c MajorityConfig, l AckedIndexer, id uint64, idx uint64) AckedIndexer {
 						ll := mapAckIndexer{}
@@ -202,24 +203,24 @@ func TestDataDriven(t *testing.T) {
 							// further.
 							lo := overlay(c, l, id, iidx.Index-1)
 							if aIdx := c.CommittedIndex(lo, false); aIdx != idx {
-								fmt.Fprintf(&buf, "%s <-- overlaying %d->%d", aIdx, id, iidx)
+								fmt.Fprintf(&buf, "%s <-- overlaying %d->%d", strconv.FormatUint(aIdx, 10), id, iidx)
 							}
 							lo = overlay(c, l, id, 0)
 							if aIdx := c.CommittedIndex(lo, false); aIdx != idx {
-								fmt.Fprintf(&buf, "%s <-- overlaying %d->0", aIdx, id)
+								fmt.Fprintf(&buf, "%s <-- overlaying %d->0", strconv.FormatUint(aIdx, 10), id)
 							}
 						}
 					}
-					fmt.Fprintf(&buf, "%s\n", idx)
+					fmt.Fprintf(&buf, "%s\n", strconv.FormatUint(idx, 10))
 				} else {
 					cc := JointConfig([2]MajorityConfig{c, cj})
 					fmt.Fprint(&buf, cc.Describe(l))
 					idx := cc.CommittedIndex(l)
 					// Interchanging the majorities shouldn't make a difference. If it does, print.
 					if aIdx := JointConfig([2]MajorityConfig{cj, c}).CommittedIndex(l); aIdx != idx {
-						fmt.Fprintf(&buf, "%s <-- via symmetry\n", aIdx)
+						fmt.Fprintf(&buf, "%s <-- via symmetry\n", strconv.FormatUint(aIdx, 10))
 					}
-					fmt.Fprintf(&buf, "%s\n", idx)
+					fmt.Fprintf(&buf, "%s\n", strconv.FormatUint(idx, 10))
 				}
 			case "vote":
 				ll := makeLookuper(votes, ids, idsj)
