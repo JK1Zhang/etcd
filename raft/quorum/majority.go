@@ -71,12 +71,12 @@ func (c MajorityConfig) Describe(l AckedIndexer) string {
 		if info[i].idx == info[j].idx {
 			return info[i].id < info[j].id
 		}
-		return info[i].idx < info[j].idx
+		return info[i].idx.Index < info[j].idx.Index
 	})
 
 	// Populate .bar.
 	for i := range info {
-		if i > 0 && info[i-1].idx < info[i].idx {
+		if i > 0 && info[i-1].idx.Index < info[i].idx.Index {
 			info[i].bar = i
 		}
 	}
@@ -121,9 +121,18 @@ func insertionSort(sl []uint64) {
 	}
 }
 
+func insertionSortByIndex(sl []Index) {
+	a, b := 0, len(sl)
+	for i := a + 1; i < b; i++ {
+		for j := i; j > a && sl[j].Index < sl[j-1].Index; j-- {
+			sl[j], sl[j-1] = sl[j-1], sl[j]
+		}
+	}
+}
+
 // CommittedIndex computes the committed index from those supplied via the
 // provided AckedIndexer (for the active config).
-func (c MajorityConfig) CommittedIndex(l AckedIndexer) Index {
+func (c MajorityConfig) CommittedIndex(l AckedIndexer, use_group_commit bool) uint64 {
 	n := len(c)
 	if n == 0 {
 		// This plays well with joint quorums which, when one half is the zero
@@ -138,12 +147,12 @@ func (c MajorityConfig) CommittedIndex(l AckedIndexer) Index {
 	// replication factor of >7 is rare, and in cases in which it happens
 	// performance is a lesser concern (additionally the performance
 	// implications of an allocation here are far from drastic).
-	var stk [7]uint64
-	var srt []uint64
+	var stk [7]Index
+	var srt []Index
 	if len(stk) >= n {
 		srt = stk[:n]
 	} else {
-		srt = make([]uint64, n)
+		srt = make([]Index, n)
 	}
 
 	{
@@ -153,8 +162,8 @@ func (c MajorityConfig) CommittedIndex(l AckedIndexer) Index {
 		// the left after sorting below anyway).
 		i := n - 1
 		for id := range c {
-			if idx, ok := l.AckedIndex(id); ok {
-				srt[i] = uint64(idx)
+			if Index, ok := l.AckedIndex(id); ok {
+				srt[i] = Index
 				i--
 			}
 		}
@@ -162,13 +171,45 @@ func (c MajorityConfig) CommittedIndex(l AckedIndexer) Index {
 
 	// Sort by index. Use a bespoke algorithm (copied from the stdlib's sort
 	// package) to keep srt on the stack.
-	insertionSort(srt)
+	// insertionSort(srt)
+
+	insertionSortByIndex(srt)
 
 	// The smallest index into the array for which the value is acked by a
 	// quorum. In other words, from the end of the slice, move n/2+1 to the
 	// left (accounting for zero-indexing).
 	pos := n - (n/2 + 1)
-	return Index(srt[pos])
+	if !use_group_commit {
+		return srt[pos].Index
+	}
+	quorum_commit_index := srt[pos].Index
+	checked_group_id := make(map[uint64]bool)
+	checked_group_id[srt[pos].Group_id] = true
+	single_group := true
+	group_num := 2
+	for i := n - 1; i >= 0; i-- {
+		if srt[i].Group_id == 0 {
+			single_group = false
+			continue
+		}
+		if len(checked_group_id) == 1 && checked_group_id[srt[pos].Group_id] == true {
+			// checked_group_id = srt[i].Group_id
+			checked_group_id[srt[i].Group_id] = true
+			continue
+		}
+		if checked_group_id[srt[i].Group_id] {
+			continue
+		}
+		checked_group_id[srt[i].Group_id] = true
+		if len(checked_group_id) == group_num {
+			return srt[i].Index
+		}
+	}
+	if single_group {
+		return quorum_commit_index
+	} else {
+		return srt[n-1].Index
+	}
 }
 
 // VoteResult takes a mapping of voters to yes/no (true/false) votes and returns

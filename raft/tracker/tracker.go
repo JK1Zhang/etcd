@@ -167,9 +167,13 @@ var _ quorum.AckedIndexer = matchAckIndexer(nil)
 func (l matchAckIndexer) AckedIndex(id uint64) (quorum.Index, bool) {
 	pr, ok := l[id]
 	if !ok {
-		return 0, false
+		return quorum.Index{Index: 0, Group_id: 0}, false
 	}
-	return quorum.Index(pr.Match), true
+	AckedIdx := quorum.Index{
+		Index:    pr.Match,
+		Group_id: pr.commit_group_id,
+	}
+	return AckedIdx, true
 }
 
 // Committed returns the largest log index known to be committed based on what

@@ -20,13 +20,16 @@ import (
 )
 
 // Index is a Raft log position.
-type Index uint64
+type Index struct {
+	Index    uint64
+	Group_id uint64
+}
 
 func (i Index) String() string {
-	if i == math.MaxUint64 {
+	if i.Index == math.MaxUint64 {
 		return "∞"
 	}
-	return strconv.FormatUint(uint64(i), 10)
+	return strconv.FormatUint(uint64(i.Index), 10)
 }
 
 // AckedIndexer allows looking up a commit index for a given ID of a voter

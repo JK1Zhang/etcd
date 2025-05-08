@@ -44,24 +44,24 @@ func TestQuick(t *testing.T) {
 }
 
 // smallRandIdxMap returns a reasonably sized map of ids to commit indexes.
-func smallRandIdxMap(rand *rand.Rand, _ int) map[uint64]Index {
-	// Hard-code a reasonably small size here (quick will hard-code 50, which
-	// is not useful here).
-	size := 10
+// func smallRandIdxMap(rand *rand.Rand, _ int) map[uint64]Index {
+// 	// Hard-code a reasonably small size here (quick will hard-code 50, which
+// 	// is not useful here).
+// 	size := 10
 
-	n := rand.Intn(size)
-	ids := rand.Perm(2 * n)[:n]
-	idxs := make([]int, len(ids))
-	for i := range idxs {
-		idxs[i] = rand.Intn(n)
-	}
+// 	n := rand.Intn(size)
+// 	ids := rand.Perm(2 * n)[:n]
+// 	idxs := make([]int, len(ids))
+// 	for i := range idxs {
+// 		idxs[i] = rand.Intn(n)
+// 	}
 
-	m := map[uint64]Index{}
-	for i := range ids {
-		m[uint64(ids[i])] = Index(idxs[i])
-	}
-	return m
-}
+// 	m := map[uint64]Index{}
+// 	for i := range ids {
+// 		m[uint64(ids[i])] = Index(idxs[i])
+// 	}
+// 	return m
+// }
 
 type idxMap map[uint64]Index
 
@@ -84,7 +84,8 @@ func (memberMap) Generate(rand *rand.Rand, size int) reflect.Value {
 // This is an alternative implementation of (MajorityConfig).CommittedIndex(l).
 func alternativeMajorityCommittedIndex(c MajorityConfig, l AckedIndexer) Index {
 	if len(c) == 0 {
-		return math.MaxUint64
+		// return math.MaxUint64
+		return Index{Index: math.MaxUint64, Group_id: 0}
 	}
 
 	idToIdx := map[uint64]Index{}
@@ -102,7 +103,7 @@ func alternativeMajorityCommittedIndex(c MajorityConfig, l AckedIndexer) Index {
 
 	for _, idx := range idToIdx {
 		for idy := range idxToVotes {
-			if idy > idx {
+			if idy.Index > idx.Index {
 				continue
 			}
 			idxToVotes[idy]++
@@ -113,7 +114,7 @@ func alternativeMajorityCommittedIndex(c MajorityConfig, l AckedIndexer) Index {
 	q := len(c)/2 + 1
 	var maxQuorumIdx Index
 	for idx, n := range idxToVotes {
-		if n >= q && idx > maxQuorumIdx {
+		if n >= q && idx.Index > maxQuorumIdx.Index {
 			maxQuorumIdx = idx
 		}
 	}

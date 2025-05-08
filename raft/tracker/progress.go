@@ -28,6 +28,8 @@ import (
 // strewn around `*raft.raft`. Additionally, some fields are only used when in a
 // certain State. All of this isn't ideal.
 type Progress struct {
+	commit_group_id uint64
+
 	Match, Next uint64
 	// State defines how the leader should interact with the follower.
 	//
