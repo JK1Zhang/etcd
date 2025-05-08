@@ -192,7 +192,7 @@ func (c MajorityConfig) CommittedIndex(l AckedIndexer, use_group_commit bool) ui
 			single_group = false
 			continue
 		}
-		if len(checked_group_id) == 1 && checked_group_id[srt[pos].Group_id] == true {
+		if len(checked_group_id) == 1 && checked_group_id[srt[pos].Group_id] {
 			// checked_group_id = srt[i].Group_id
 			checked_group_id[srt[i].Group_id] = true
 			continue
