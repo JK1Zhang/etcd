@@ -29,11 +29,11 @@ func BenchmarkMajorityConfig_CommittedIndex(b *testing.B) {
 			l := mapAckIndexer{}
 			for i := uint64(0); i < uint64(n); i++ {
 				c[i+1] = struct{}{}
-				l[i+1] = Index(rand.Int63n(math.MaxInt64))
+				l[i+1] = Index{Index: uint64(rand.Int63n(math.MaxInt64)), Group_id: 0}
 			}
 
 			for i := 0; i < b.N; i++ {
-				_ = c.CommittedIndex(l)
+				_ = c.CommittedIndex(l, false)
 			}
 		})
 	}

@@ -32,10 +32,10 @@ func TestQuick(t *testing.T) {
 
 	t.Run("majority_commit", func(t *testing.T) {
 		fn1 := func(c memberMap, l idxMap) uint64 {
-			return uint64(MajorityConfig(c).CommittedIndex(mapAckIndexer(l)))
+			return uint64(MajorityConfig(c).CommittedIndex(mapAckIndexer(l), false))
 		}
 		fn2 := func(c memberMap, l idxMap) uint64 {
-			return uint64(alternativeMajorityCommittedIndex(MajorityConfig(c), mapAckIndexer(l)))
+			return uint64(alternativeMajorityCommittedIndex(MajorityConfig(c), mapAckIndexer(l)).Index)
 		}
 		if err := quick.CheckEqual(fn1, fn2, cfg); err != nil {
 			t.Fatal(err)
@@ -44,24 +44,24 @@ func TestQuick(t *testing.T) {
 }
 
 // smallRandIdxMap returns a reasonably sized map of ids to commit indexes.
-// func smallRandIdxMap(rand *rand.Rand, _ int) map[uint64]Index {
-// 	// Hard-code a reasonably small size here (quick will hard-code 50, which
-// 	// is not useful here).
-// 	size := 10
+func smallRandIdxMap(rand *rand.Rand, _ int) map[uint64]Index {
+	// Hard-code a reasonably small size here (quick will hard-code 50, which
+	// is not useful here).
+	size := 10
 
-// 	n := rand.Intn(size)
-// 	ids := rand.Perm(2 * n)[:n]
-// 	idxs := make([]int, len(ids))
-// 	for i := range idxs {
-// 		idxs[i] = rand.Intn(n)
-// 	}
+	n := rand.Intn(size)
+	ids := rand.Perm(2 * n)[:n]
+	idxs := make([]int, len(ids))
+	for i := range idxs {
+		idxs[i] = rand.Intn(n)
+	}
 
-// 	m := map[uint64]Index{}
-// 	for i := range ids {
-// 		m[uint64(ids[i])] = Index(idxs[i])
-// 	}
-// 	return m
-// }
+	m := map[uint64]Index{}
+	for i := range ids {
+		m[uint64(ids[i])] = Index{Index: uint64(idxs[i]), Group_id: 0}
+	}
+	return m
+}
 
 type idxMap map[uint64]Index
 

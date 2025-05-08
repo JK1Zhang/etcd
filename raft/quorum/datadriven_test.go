@@ -87,17 +87,17 @@ func TestDataDriven(t *testing.T) {
 								t.Fatalf("cannot use 0 as idx")
 							}
 						}
-						idxs = append(idxs, Index(n))
+						idxs = append(idxs, Index{Index: n, Group_id: 0})
 					case "votes":
 						var s string
 						arg.Scan(t, i, &s)
 						switch s {
 						case "y":
-							votes = append(votes, 2)
+							votes = append(votes, Index{Index: 2, Group_id: 0})
 						case "n":
-							votes = append(votes, 1)
+							votes = append(votes, Index{Index: 1, Group_id: 0})
 						case "_":
-							votes = append(votes, 0)
+							votes = append(votes, Index{Index: 0, Group_id: 0})
 						default:
 							t.Fatalf("unknown vote: %s", s)
 						}
@@ -142,7 +142,7 @@ func TestDataDriven(t *testing.T) {
 					// "zero entry". Note that we prevent tests from specifying
 					// zero commit indexes, so that there's no confusion between
 					// the two concepts.
-					if l[id] == 0 {
+					if l[id].Index == 0 {
 						delete(l, id)
 					}
 				}
@@ -168,11 +168,11 @@ func TestDataDriven(t *testing.T) {
 				// Branch based on whether this is a majority or joint quorum
 				// test case.
 				if !joint {
-					idx := c.CommittedIndex(l)
+					idx := c.CommittedIndex(l, false)
 					fmt.Fprint(&buf, c.Describe(l))
 					// These alternative computations should return the same
 					// result. If not, print to the output.
-					if aIdx := alternativeMajorityCommittedIndex(c, l); aIdx != idx {
+					if aIdx := alternativeMajorityCommittedIndex(c, l); aIdx.Index != idx {
 						fmt.Fprintf(&buf, "%s <-- via alternative computation\n", aIdx)
 					}
 					// Joining a majority with the empty majority should give same result.
@@ -183,11 +183,11 @@ func TestDataDriven(t *testing.T) {
 					if aIdx := JointConfig([2]MajorityConfig{c, c}).CommittedIndex(l); aIdx != idx {
 						fmt.Fprintf(&buf, "%s <-- via self-joint quorum\n", aIdx)
 					}
-					overlay := func(c MajorityConfig, l AckedIndexer, id uint64, idx Index) AckedIndexer {
+					overlay := func(c MajorityConfig, l AckedIndexer, id uint64, idx uint64) AckedIndexer {
 						ll := mapAckIndexer{}
 						for iid := range c {
 							if iid == id {
-								ll[iid] = idx
+								ll[iid] = Index{Index: idx, Group_id: 0}
 							} else if idx, ok := l.AckedIndex(iid); ok {
 								ll[iid] = idx
 							}
@@ -196,16 +196,16 @@ func TestDataDriven(t *testing.T) {
 					}
 					for id := range c {
 						iidx, _ := l.AckedIndex(id)
-						if idx > iidx && iidx > 0 {
+						if idx > iidx.Index && iidx.Index > 0 {
 							// If the committed index was definitely above the currently
 							// inspected idx, the result shouldn't change if we lower it
 							// further.
-							lo := overlay(c, l, id, iidx-1)
-							if aIdx := c.CommittedIndex(lo); aIdx != idx {
+							lo := overlay(c, l, id, iidx.Index-1)
+							if aIdx := c.CommittedIndex(lo, false); aIdx != idx {
 								fmt.Fprintf(&buf, "%s <-- overlaying %d->%d", aIdx, id, iidx)
 							}
 							lo = overlay(c, l, id, 0)
-							if aIdx := c.CommittedIndex(lo); aIdx != idx {
+							if aIdx := c.CommittedIndex(lo, false); aIdx != idx {
 								fmt.Fprintf(&buf, "%s <-- overlaying %d->0", aIdx, id)
 							}
 						}
@@ -225,7 +225,7 @@ func TestDataDriven(t *testing.T) {
 				ll := makeLookuper(votes, ids, idsj)
 				l := map[uint64]bool{}
 				for id, v := range ll {
-					l[id] = v != 1 // NB: 1 == false, 2 == true
+					l[id] = v.Index != 1 // NB: 1 == false, 2 == true
 				}
 
 				if !joint {
