@@ -97,7 +97,7 @@ func (c MajorityConfig) Describe(l AckedIndexer) string {
 		} else {
 			fmt.Fprint(&buf, strings.Repeat("x", bar)+">"+strings.Repeat(" ", n-bar))
 		}
-		fmt.Fprintf(&buf, " %5d    (id=%d)\n", info[i].idx.Index, info[i].id)
+		fmt.Fprintf(&buf, " %5s    (id=%d)\n", info[i].idx, info[i].id)
 	}
 	return buf.String()
 }
