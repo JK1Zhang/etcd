@@ -46,13 +46,13 @@ func (c JointConfig) Describe(l AckedIndexer) string {
 // CommittedIndex returns the largest committed index for the given joint
 // quorum. An index is jointly committed if it is committed in both constituent
 // majorities.
-func (c JointConfig) CommittedIndex(l AckedIndexer) uint64 {
-	idx0 := c[0].CommittedIndex(l, false)
-	idx1 := c[1].CommittedIndex(l, false)
+func (c JointConfig) CommittedIndex(l AckedIndexer, use_group_commit bool) (uint64, bool) {
+	idx0, use_gc_0 := c[0].CommittedIndex(l, use_group_commit)
+	idx1, use_gc_1 := c[1].CommittedIndex(l, use_group_commit)
 	if idx0 < idx1 {
-		return idx0
+		return idx0, use_gc_0 && use_gc_1
 	}
-	return idx1
+	return idx1, use_gc_0 && use_gc_1
 }
 
 // VoteResult takes a mapping of voters to yes/no (true/false) votes and returns

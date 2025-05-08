@@ -122,6 +122,8 @@ type ProgressTracker struct {
 	Votes map[uint64]bool
 
 	MaxInflight int
+
+	group_commit bool
 }
 
 // MakeProgressTracker initializes a ProgressTracker.
@@ -136,8 +138,9 @@ func MakeProgressTracker(maxInflight int) ProgressTracker {
 			Learners:     nil, // only populated when used
 			LearnersNext: nil, // only populated when used
 		},
-		Votes:    map[uint64]bool{},
-		Progress: map[uint64]*Progress{},
+		Votes:        map[uint64]bool{},
+		Progress:     map[uint64]*Progress{},
+		group_commit: false,
 	}
 	return p
 }
@@ -151,6 +154,13 @@ func (p *ProgressTracker) ConfState() pb.ConfState {
 		LearnersNext:   quorum.MajorityConfig(p.LearnersNext).Slice(),
 		AutoLeave:      p.AutoLeave,
 	}
+}
+
+func (p *ProgressTracker) EnableGroupCommit(enable bool) {
+	p.group_commit = enable
+}
+func (p *ProgressTracker) GetGroupCommit() bool {
+	return p.group_commit
 }
 
 // IsSingleton returns true if (and only if) there is only one voting member
@@ -171,15 +181,15 @@ func (l matchAckIndexer) AckedIndex(id uint64) (quorum.Index, bool) {
 	}
 	AckedIdx := quorum.Index{
 		Index:    pr.Match,
-		Group_id: pr.commit_group_id,
+		Group_id: pr.CommitGroupID,
 	}
 	return AckedIdx, true
 }
 
 // Committed returns the largest log index known to be committed based on what
 // the voting members of the group have acknowledged.
-func (p *ProgressTracker) Committed() uint64 {
-	return uint64(p.Voters.CommittedIndex(matchAckIndexer(p.Progress)))
+func (p *ProgressTracker) Committed() (uint64, bool) {
+	return p.Voters.CommittedIndex(matchAckIndexer(p.Progress), p.group_commit)
 }
 
 func insertionSort(sl []uint64) {

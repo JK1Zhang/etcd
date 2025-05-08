@@ -31,8 +31,10 @@ func TestQuick(t *testing.T) {
 	}
 
 	t.Run("majority_commit", func(t *testing.T) {
+		use_group_commit := false
 		fn1 := func(c memberMap, l idxMap) uint64 {
-			return uint64(MajorityConfig(c).CommittedIndex(mapAckIndexer(l), false))
+			idx, _ := MajorityConfig(c).CommittedIndex(mapAckIndexer(l), use_group_commit)
+			return uint64(idx)
 		}
 		fn2 := func(c memberMap, l idxMap) uint64 {
 			return uint64(alternativeMajorityCommittedIndex(MajorityConfig(c), mapAckIndexer(l)))

@@ -22,6 +22,7 @@ import (
 )
 
 func BenchmarkMajorityConfig_CommittedIndex(b *testing.B) {
+	use_group_commit := false
 	// go test -run - -bench . -benchmem ./raft/quorum
 	for _, n := range []int{1, 3, 5, 7, 9, 11} {
 		b.Run(fmt.Sprintf("voters=%d", n), func(b *testing.B) {
@@ -33,7 +34,7 @@ func BenchmarkMajorityConfig_CommittedIndex(b *testing.B) {
 			}
 
 			for i := 0; i < b.N; i++ {
-				_ = c.CommittedIndex(l, false)
+				_, _ = c.CommittedIndex(l, use_group_commit)
 			}
 		})
 	}

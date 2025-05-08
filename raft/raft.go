@@ -583,7 +583,7 @@ func (r *raft) advance(rd Ready) {
 // the commit index changed (in which case the caller should call
 // r.bcastAppend).
 func (r *raft) maybeCommit() bool {
-	mci := r.prs.Committed()
+	mci, _ := r.prs.Committed()
 	return r.raftLog.maybeCommit(mci, r.Term)
 }
 
@@ -1834,4 +1834,51 @@ func sendMsgReadIndexResponse(r *raft, m pb.Message) {
 			r.send(resp)
 		}
 	}
+}
+
+// Configures group commit
+func (r *raft) enableGroupCommit(enable bool) {
+	r.prs.EnableGroupCommit(enable)
+	if r.state == StateLeader && !enable && r.maybeCommit() {
+		r.bcastAppend()
+	}
+}
+func (r *raft) getGroupCommit() bool {
+	return r.prs.GetGroupCommit()
+}
+
+// Assigns groups to peers
+func (r *raft) assignGroups(ids map[uint64]uint64) {
+	prs := r.prs
+	for peerID, groupID := range ids {
+		if pr, ok := prs.Progress[peerID]; ok {
+			pr.CommitGroupID = groupID
+		}
+	}
+	if r.state == StateLeader && r.getGroupCommit() && r.maybeCommit() {
+		r.bcastAppend()
+	}
+}
+
+// Removes all commit group configurations.
+func (r *raft) clearCommitGroup() {
+	for _, pr := range r.prs.Progress {
+		pr.CommitGroupID = 0
+	}
+}
+
+// / Checks whether the raft group is using group commit and consistent
+// / over group.
+// /
+// /// If it can't get a correct answer, false is returned.
+func (r *raft) checkGroupCommitConsistent() bool {
+	if r.state != StateLeader {
+		return false
+	}
+	if !r.committedEntryInCurrentTerm() {
+		return false
+	}
+	index, useGroupCommit := r.prs.Committed()
+	r.logger.Debugf("check group commit consistent; index: %d, use_group_commit: %t, committed: %d", index, useGroupCommit, r.raftLog.committed)
+	return useGroupCommit && index == r.raftLog.committed
 }

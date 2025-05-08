@@ -132,12 +132,12 @@ func insertionSortByIndex(sl []Index) {
 
 // CommittedIndex computes the committed index from those supplied via the
 // provided AckedIndexer (for the active config).
-func (c MajorityConfig) CommittedIndex(l AckedIndexer, use_group_commit bool) uint64 {
+func (c MajorityConfig) CommittedIndex(l AckedIndexer, use_group_commit bool) (uint64, bool) {
 	n := len(c)
 	if n == 0 {
 		// This plays well with joint quorums which, when one half is the zero
 		// MajorityConfig, should behave like the other half.
-		return math.MaxUint64
+		return math.MaxUint64, true
 	}
 
 	// Use an on-stack slice to collect the committed indexes when n <= 7
@@ -180,7 +180,7 @@ func (c MajorityConfig) CommittedIndex(l AckedIndexer, use_group_commit bool) ui
 	// left (accounting for zero-indexing).
 	pos := n - (n/2 + 1)
 	if !use_group_commit {
-		return srt[pos].Index
+		return srt[pos].Index, false
 	}
 	quorum_commit_index := srt[pos].Index
 	checked_group_id := make(map[uint64]bool)
@@ -202,14 +202,13 @@ func (c MajorityConfig) CommittedIndex(l AckedIndexer, use_group_commit bool) ui
 		}
 		checked_group_id[srt[i].Group_id] = true
 		if len(checked_group_id) == group_num {
-			return srt[i].Index
+			return srt[i].Index, true
 		}
 	}
 	if single_group {
-		return quorum_commit_index
-	} else {
-		return srt[n-1].Index
+		return quorum_commit_index, false
 	}
+	return srt[n-1].Index, false
 }
 
 // VoteResult takes a mapping of voters to yes/no (true/false) votes and returns

@@ -172,12 +172,13 @@ func TestDataDriven(t *testing.T) {
 			var buf strings.Builder
 			switch d.Cmd {
 			case "committed":
+				use_group_commit := false
 				l := makeLookuper(idxs, ids, idsj)
 
 				// Branch based on whether this is a majority or joint quorum
 				// test case.
 				if !joint {
-					idx := c.CommittedIndex(l, false)
+					idx, _ := c.CommittedIndex(l, use_group_commit)
 					fmt.Fprint(&buf, c.Describe(l))
 					// These alternative computations should return the same
 					// result. If not, print to the output.
@@ -185,11 +186,11 @@ func TestDataDriven(t *testing.T) {
 						fmt.Fprintf(&buf, "%s <-- via alternative computation\n", converIndexToString(aIdx))
 					}
 					// Joining a majority with the empty majority should give same result.
-					if aIdx := JointConfig([2]MajorityConfig{c, {}}).CommittedIndex(l); aIdx != idx {
+					if aIdx, _ := JointConfig([2]MajorityConfig{c, {}}).CommittedIndex(l, use_group_commit); aIdx != idx {
 						fmt.Fprintf(&buf, "%s <-- via zero-joint quorum\n", converIndexToString(aIdx))
 					}
 					// Joining a majority with itself should give same result.
-					if aIdx := JointConfig([2]MajorityConfig{c, c}).CommittedIndex(l); aIdx != idx {
+					if aIdx, _ := JointConfig([2]MajorityConfig{c, c}).CommittedIndex(l, use_group_commit); aIdx != idx {
 						fmt.Fprintf(&buf, "%s <-- via self-joint quorum\n", converIndexToString(aIdx))
 					}
 					overlay := func(c MajorityConfig, l AckedIndexer, id uint64, idx uint64) AckedIndexer {
@@ -204,17 +205,18 @@ func TestDataDriven(t *testing.T) {
 						return ll
 					}
 					for id := range c {
-						iidx, _ := l.AckedIndex(id)
-						if idx > iidx.Index && iidx.Index > 0 {
+						tmp, _ := l.AckedIndex(id)
+						iidx := tmp.Index
+						if idx > iidx && iidx > 0 {
 							// If the committed index was definitely above the currently
 							// inspected idx, the result shouldn't change if we lower it
 							// further.
-							lo := overlay(c, l, id, iidx.Index-1)
-							if aIdx := c.CommittedIndex(lo, false); aIdx != idx {
+							lo := overlay(c, l, id, iidx-1)
+							if aIdx, _ := c.CommittedIndex(lo, use_group_commit); aIdx != idx {
 								fmt.Fprintf(&buf, "%s <-- overlaying %d->%d", converIndexToString(aIdx), id, iidx)
 							}
 							lo = overlay(c, l, id, 0)
-							if aIdx := c.CommittedIndex(lo, false); aIdx != idx {
+							if aIdx, _ := c.CommittedIndex(lo, use_group_commit); aIdx != idx {
 								fmt.Fprintf(&buf, "%s <-- overlaying %d->0", converIndexToString(aIdx), id)
 							}
 						}
@@ -223,9 +225,9 @@ func TestDataDriven(t *testing.T) {
 				} else {
 					cc := JointConfig([2]MajorityConfig{c, cj})
 					fmt.Fprint(&buf, cc.Describe(l))
-					idx := cc.CommittedIndex(l)
+					idx, _ := cc.CommittedIndex(l, use_group_commit)
 					// Interchanging the majorities shouldn't make a difference. If it does, print.
-					if aIdx := JointConfig([2]MajorityConfig{cj, c}).CommittedIndex(l); aIdx != idx {
+					if aIdx, _ := JointConfig([2]MajorityConfig{cj, c}).CommittedIndex(l, use_group_commit); aIdx != idx {
 						fmt.Fprintf(&buf, "%s <-- via symmetry\n", converIndexToString(aIdx))
 					}
 					fmt.Fprintf(&buf, "%s\n", converIndexToString(idx))
