@@ -16,6 +16,7 @@ package quorum
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"testing"
@@ -34,6 +35,13 @@ import (
 // which it is known that the result shouldn't change. For example,
 // interchanging the majority configurations of a joint quorum must not
 // influence the result; if it does, this is noted in the test's output.
+
+func converIndexToString(i uint64) string {
+	if i == math.MaxUint64 {
+		return "∞"
+	}
+	return strconv.FormatUint(i, 10)
+}
 func TestDataDriven(t *testing.T) {
 	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
 		datadriven.RunTest(t, path, func(t *testing.T, d *datadriven.TestData) string {
@@ -173,16 +181,16 @@ func TestDataDriven(t *testing.T) {
 					fmt.Fprint(&buf, c.Describe(l))
 					// These alternative computations should return the same
 					// result. If not, print to the output.
-					if aIdx := alternativeMajorityCommittedIndex(c, l); aIdx.Index != idx {
-						fmt.Fprintf(&buf, "%s <-- via alternative computation\n", aIdx)
+					if aIdx := alternativeMajorityCommittedIndex(c, l); aIdx != idx {
+						fmt.Fprintf(&buf, "%s <-- via alternative computation\n", converIndexToString(aIdx))
 					}
 					// Joining a majority with the empty majority should give same result.
 					if aIdx := JointConfig([2]MajorityConfig{c, {}}).CommittedIndex(l); aIdx != idx {
-						fmt.Fprintf(&buf, "%s <-- via zero-joint quorum\n", strconv.FormatUint(aIdx, 10))
+						fmt.Fprintf(&buf, "%s <-- via zero-joint quorum\n", converIndexToString(aIdx))
 					}
 					// Joining a majority with itself should give same result.
 					if aIdx := JointConfig([2]MajorityConfig{c, c}).CommittedIndex(l); aIdx != idx {
-						fmt.Fprintf(&buf, "%s <-- via self-joint quorum\n", strconv.FormatUint(aIdx, 10))
+						fmt.Fprintf(&buf, "%s <-- via self-joint quorum\n", converIndexToString(aIdx))
 					}
 					overlay := func(c MajorityConfig, l AckedIndexer, id uint64, idx uint64) AckedIndexer {
 						ll := mapAckIndexer{}
@@ -203,24 +211,24 @@ func TestDataDriven(t *testing.T) {
 							// further.
 							lo := overlay(c, l, id, iidx.Index-1)
 							if aIdx := c.CommittedIndex(lo, false); aIdx != idx {
-								fmt.Fprintf(&buf, "%s <-- overlaying %d->%d", strconv.FormatUint(aIdx, 10), id, iidx)
+								fmt.Fprintf(&buf, "%s <-- overlaying %d->%d", converIndexToString(aIdx), id, iidx)
 							}
 							lo = overlay(c, l, id, 0)
 							if aIdx := c.CommittedIndex(lo, false); aIdx != idx {
-								fmt.Fprintf(&buf, "%s <-- overlaying %d->0", strconv.FormatUint(aIdx, 10), id)
+								fmt.Fprintf(&buf, "%s <-- overlaying %d->0", converIndexToString(aIdx), id)
 							}
 						}
 					}
-					fmt.Fprintf(&buf, "%s\n", strconv.FormatUint(idx, 10))
+					fmt.Fprintf(&buf, "%s\n", converIndexToString(idx))
 				} else {
 					cc := JointConfig([2]MajorityConfig{c, cj})
 					fmt.Fprint(&buf, cc.Describe(l))
 					idx := cc.CommittedIndex(l)
 					// Interchanging the majorities shouldn't make a difference. If it does, print.
 					if aIdx := JointConfig([2]MajorityConfig{cj, c}).CommittedIndex(l); aIdx != idx {
-						fmt.Fprintf(&buf, "%s <-- via symmetry\n", strconv.FormatUint(aIdx, 10))
+						fmt.Fprintf(&buf, "%s <-- via symmetry\n", converIndexToString(aIdx))
 					}
-					fmt.Fprintf(&buf, "%s\n", strconv.FormatUint(idx, 10))
+					fmt.Fprintf(&buf, "%s\n", converIndexToString(idx))
 				}
 			case "vote":
 				ll := makeLookuper(votes, ids, idsj)

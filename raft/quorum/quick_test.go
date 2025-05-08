@@ -35,7 +35,7 @@ func TestQuick(t *testing.T) {
 			return uint64(MajorityConfig(c).CommittedIndex(mapAckIndexer(l), false))
 		}
 		fn2 := func(c memberMap, l idxMap) uint64 {
-			return uint64(alternativeMajorityCommittedIndex(MajorityConfig(c), mapAckIndexer(l)).Index)
+			return uint64(alternativeMajorityCommittedIndex(MajorityConfig(c), mapAckIndexer(l)))
 		}
 		if err := quick.CheckEqual(fn1, fn2, cfg); err != nil {
 			t.Fatal(err)
@@ -82,10 +82,10 @@ func (memberMap) Generate(rand *rand.Rand, size int) reflect.Value {
 }
 
 // This is an alternative implementation of (MajorityConfig).CommittedIndex(l).
-func alternativeMajorityCommittedIndex(c MajorityConfig, l AckedIndexer) Index {
+func alternativeMajorityCommittedIndex(c MajorityConfig, l AckedIndexer) uint64 {
 	if len(c) == 0 {
 		// return math.MaxUint64
-		return Index{Index: math.MaxUint64, Group_id: 0}
+		return math.MaxUint64
 	}
 
 	idToIdx := map[uint64]Index{}
@@ -119,5 +119,5 @@ func alternativeMajorityCommittedIndex(c MajorityConfig, l AckedIndexer) Index {
 		}
 	}
 
-	return maxQuorumIdx
+	return maxQuorumIdx.Index
 }
