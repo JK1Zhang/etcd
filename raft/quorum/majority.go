@@ -182,31 +182,25 @@ func (c MajorityConfig) CommittedIndex(l AckedIndexer, use_group_commit bool) (u
 	if !use_group_commit {
 		return srt[pos].Index, false
 	}
-	quorum_commit_index := srt[pos].Index
-	checked_group_id := make(map[uint64]bool)
-	checked_group_id[srt[pos].Group_id] = true
-	single_group := true
-	group_num := 2
+	quorumCommitIndex := srt[pos].Index
+	checkedGroupId := make(map[uint64]bool)
+	singleGroup := true
+	targetGroupNum := 2
 	for i := n - 1; i >= 0; i-- {
 		if srt[i].Group_id == 0 {
-			single_group = false
+			singleGroup = false
 			continue
 		}
-		if len(checked_group_id) == 1 && checked_group_id[srt[pos].Group_id] {
-			// checked_group_id = srt[i].Group_id
-			checked_group_id[srt[i].Group_id] = true
+		if checkedGroupId[srt[i].Group_id] {
 			continue
 		}
-		if checked_group_id[srt[i].Group_id] {
-			continue
-		}
-		checked_group_id[srt[i].Group_id] = true
-		if len(checked_group_id) == group_num {
-			return srt[i].Index, true
+		checkedGroupId[srt[i].Group_id] = true
+		if len(checkedGroupId) >= targetGroupNum {
+			return min(srt[i].Index, quorumCommitIndex), true
 		}
 	}
-	if single_group {
-		return quorum_commit_index, false
+	if singleGroup {
+		return quorumCommitIndex, false
 	}
 	return srt[n-1].Index, false
 }
