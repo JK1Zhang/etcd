@@ -187,11 +187,10 @@ func TestDataDriven(t *testing.T) {
 					if len(gids) != len(voters) {
 						return fmt.Sprintf("error: mismatched input (explicit or _) for group ids %v: %v",
 							voters, gids)
-					} else {
-						// assign group ids to idxs
-						for i := range gids {
-							idxs[i].Group_id = gids[i]
-						}
+					}
+					// assign group ids to idxs
+					for i := range gids {
+						idxs[i].Group_id = gids[i]
 					}
 				}
 			}
