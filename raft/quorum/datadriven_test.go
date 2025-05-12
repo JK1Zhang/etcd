@@ -66,6 +66,9 @@ func TestDataDriven(t *testing.T) {
 			// but is convenient because it allows sharing code between the two.
 			var votes []Index
 
+			// group id of each nodes in the config.
+			var gids []uint64
+
 			// Parse the args.
 			for _, arg := range d.CmdArgs {
 				for i := range arg.Vals {
@@ -97,6 +100,16 @@ func TestDataDriven(t *testing.T) {
 							}
 						}
 						idxs = append(idxs, Index{Index: n, Group_id: 0})
+					case "gid":
+						var n uint64
+						if arg.Vals[i] != "_" {
+							arg.Scan(t, i, &n)
+							if n == 0 {
+								//use '_' as 0, check {}
+								t.Fatalf("cannot use 0 as gid")
+							}
+						}
+						gids = append(gids, n)
 					case "votes":
 						var s string
 						arg.Scan(t, i, &s)
@@ -160,12 +173,26 @@ func TestDataDriven(t *testing.T) {
 
 			{
 				input := idxs
+				var voters map[uint64]struct{}
 				if d.Cmd == "vote" {
 					input = votes
 				}
-				if voters := JointConfig([2]MajorityConfig{c, cj}).IDs(); len(voters) != len(input) {
+				if voters = JointConfig([2]MajorityConfig{c, cj}).IDs(); len(voters) != len(input) {
 					return fmt.Sprintf("error: mismatched input (explicit or _) for voters %v: %v",
 						voters, input)
+				}
+
+				// verify length of group ids
+				if len(gids) != 0 {
+					if len(gids) != len(voters) {
+						return fmt.Sprintf("error: mismatched input (explicit or _) for group ids %v: %v",
+							voters, gids)
+					} else {
+						// assign group ids to idxs
+						for i := range gids {
+							idxs[i].Group_id = gids[i]
+						}
+					}
 				}
 			}
 
@@ -225,6 +252,22 @@ func TestDataDriven(t *testing.T) {
 				} else {
 					cc := JointConfig([2]MajorityConfig{c, cj})
 					fmt.Fprint(&buf, cc.Describe(l))
+					idx, _ := cc.CommittedIndex(l, use_group_commit)
+					// Interchanging the majorities shouldn't make a difference. If it does, print.
+					if aIdx, _ := JointConfig([2]MajorityConfig{cj, c}).CommittedIndex(l, use_group_commit); aIdx != idx {
+						fmt.Fprintf(&buf, "%s <-- via symmetry\n", converIndexToString(aIdx))
+					}
+					fmt.Fprintf(&buf, "%s\n", converIndexToString(idx))
+				}
+			case "group_committed":
+				use_group_commit := true
+				l := makeLookuper(idxs, ids, idsj)
+
+				if !joint {
+					// TODO: majority group commit
+				} else {
+					cc := JointConfig([2]MajorityConfig{c, cj})
+					// fmt.Fprint(&buf, cc.Describe(l))
 					idx, _ := cc.CommittedIndex(l, use_group_commit)
 					// Interchanging the majorities shouldn't make a difference. If it does, print.
 					if aIdx, _ := JointConfig([2]MajorityConfig{cj, c}).CommittedIndex(l, use_group_commit); aIdx != idx {

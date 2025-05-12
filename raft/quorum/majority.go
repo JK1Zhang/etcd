@@ -202,7 +202,7 @@ func (c MajorityConfig) CommittedIndex(l AckedIndexer, use_group_commit bool) (u
 	if singleGroup {
 		return quorumCommitIndex, false
 	}
-	return srt[n-1].Index, false
+	return srt[0].Index, false
 }
 
 // VoteResult takes a mapping of voters to yes/no (true/false) votes and returns
