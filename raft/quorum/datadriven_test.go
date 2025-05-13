@@ -35,13 +35,6 @@ import (
 // which it is known that the result shouldn't change. For example,
 // interchanging the majority configurations of a joint quorum must not
 // influence the result; if it does, this is noted in the test's output.
-
-func converIndexToString(i uint64) string {
-	if i == math.MaxUint64 {
-		return "∞"
-	}
-	return strconv.FormatUint(i, 10)
-}
 func TestDataDriven(t *testing.T) {
 	datadriven.Walk(t, "testdata", func(t *testing.T, path string) {
 		datadriven.RunTest(t, path, func(t *testing.T, d *datadriven.TestData) string {
@@ -300,4 +293,11 @@ func TestDataDriven(t *testing.T) {
 			return buf.String()
 		})
 	})
+}
+
+func converIndexToString(i uint64) string {
+	if i == math.MaxUint64 {
+		return "∞"
+	}
+	return strconv.FormatUint(i, 10)
 }

@@ -112,15 +112,6 @@ func (c MajorityConfig) Slice() []uint64 {
 	return sl
 }
 
-func insertionSort(sl []uint64) {
-	a, b := 0, len(sl)
-	for i := a + 1; i < b; i++ {
-		for j := i; j > a && sl[j] < sl[j-1]; j-- {
-			sl[j], sl[j-1] = sl[j-1], sl[j]
-		}
-	}
-}
-
 func insertionSortByIndex(sl []Index) {
 	a, b := 0, len(sl)
 	for i := a + 1; i < b; i++ {
@@ -137,7 +128,7 @@ func (c MajorityConfig) CommittedIndex(l AckedIndexer, use_group_commit bool) (u
 	if n == 0 {
 		// This plays well with joint quorums which, when one half is the zero
 		// MajorityConfig, should behave like the other half.
-		return math.MaxUint64, true
+		return math.MaxUint64, false
 	}
 
 	// Use an on-stack slice to collect the committed indexes when n <= 7
@@ -184,11 +175,11 @@ func (c MajorityConfig) CommittedIndex(l AckedIndexer, use_group_commit bool) (u
 	}
 	quorumCommitIndex := srt[pos].Index
 	checkedGroupId := make(map[uint64]bool)
-	singleGroup := true
+	existNodeWithoutGroup := true
 	targetGroupNum := 2
 	for i := n - 1; i >= 0; i-- {
 		if srt[i].Group_id == 0 {
-			singleGroup = false
+			existNodeWithoutGroup = false
 			continue
 		}
 		if checkedGroupId[srt[i].Group_id] {
@@ -199,7 +190,7 @@ func (c MajorityConfig) CommittedIndex(l AckedIndexer, use_group_commit bool) (u
 			return min(srt[i].Index, quorumCommitIndex), true
 		}
 	}
-	if singleGroup {
+	if existNodeWithoutGroup {
 		return quorumCommitIndex, false
 	}
 	return srt[0].Index, false
