@@ -146,6 +146,7 @@ func (c MajorityConfig) CommittedIndex(l AckedIndexer, use_group_commit bool) (u
 		srt = make([]Index, n)
 	}
 
+	allGroupId := make(map[uint64]bool)
 	{
 		// Fill the slice with the indexes observed. Any unused slots will be
 		// left as zero; these correspond to voters that may report in, but
@@ -155,6 +156,9 @@ func (c MajorityConfig) CommittedIndex(l AckedIndexer, use_group_commit bool) (u
 		for id := range c {
 			if Index, ok := l.AckedIndex(id); ok {
 				srt[i] = Index
+				if Index.Group_id != 0 {
+					allGroupId[Index.Group_id] = true
+				}
 				i--
 			}
 		}
@@ -173,10 +177,14 @@ func (c MajorityConfig) CommittedIndex(l AckedIndexer, use_group_commit bool) (u
 	if !use_group_commit {
 		return srt[pos].Index, false
 	}
+
 	quorumCommitIndex := srt[pos].Index
 	checkedGroupId := make(map[uint64]bool)
 	existNodeWithoutGroup := true
-	targetGroupNum := 2
+	// targetGroupNum can be configured to be less than or equal to allGroupId
+	// By default, targetGroupNum is set to len(allGroupId), only logs replicated to all groups are committed.
+	targetGroupNum := max(len(allGroupId), 2)
+
 	for i := n - 1; i >= 0; i-- {
 		if srt[i].Group_id == 0 {
 			existNodeWithoutGroup = false

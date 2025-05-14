@@ -1867,6 +1867,15 @@ func (r *raft) clearCommitGroup() {
 	}
 }
 
+// Removes certain commit group with ID
+func (r *raft) removeCommitGroup(GroupID uint64) {
+	for _, pr := range r.prs.Progress {
+		if pr.CommitGroupID == GroupID {
+			pr.CommitGroupID = 0
+		}
+	}
+}
+
 // / Checks whether the raft group is using group commit and consistent
 // / over group.
 // /
